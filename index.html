@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Henry's Corner - Math Practice</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .level-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 400px;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4ade80;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .problem {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+
+        .problem input {
+            width: 100px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-align: center;
+            border: 3px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 10px;
+            transition: border-color 0.2s;
+        }
+
+        .problem input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .problem input.correct {
+            border-color: #4ade80;
+            background: #f0fdf4;
+        }
+
+        .problem input.incorrect {
+            border-color: #f87171;
+            background: #fef2f2;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .hint-area {
+            min-height: 60px;
+            margin-top: 20px;
+            padding: 15px;
+            background: #fef3c7;
+            border-radius: 10px;
+            color: #92400e;
+            font-size: 1rem;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .hint-area.visible {
+            display: block;
+        }
+
+        .hint-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            font-size: 1rem;
+            color: #667eea;
+            background: transparent;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .hint-btn:hover {
+            background: #f0f0ff;
+        }
+
+        .feedback {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 15px;
+            min-height: 30px;
+        }
+
+        .feedback.correct {
+            color: #16a34a;
+        }
+
+        .feedback.incorrect {
+            color: #dc2626;
+        }
+
+        .streak {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .streak-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e5e7eb;
+        }
+
+        .streak-dot.filled {
+            background: #4ade80;
+        }
+
+        .level-down-offer {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fef2f2;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .level-down-offer.visible {
+            display: block;
+        }
+
+        .level-down-offer p {
+            color: #991b1b;
+            margin-bottom: 10px;
+        }
+
+        .level-down-btn {
+            padding: 10px 20px;
+            background: #fca5a5;
+            border: none;
+            border-radius: 8px;
+            color: #991b1b;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 400px) {
+            .problem {
+                font-size: 2rem;
+            }
+            .problem input {
+                width: 80px;
+                font-size: 2rem;
+            }
+            .game-card {
+                padding: 20px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            header h1 {
+                font-size: 2.2rem;
+            }
+            .game-card {
+                padding: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🧮 Henry's Corner</h1>
+        <div class="level-info">
+            Level <span id="current-level">1</span> · <span id="operation-name">Addition</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+    </header>
+
+    <main class="game-card">
+        <div class="problem">
+            <span id="num1">5</span>
+            <span id="operator">+</span>
+            <span id="num2">3</span>
+            <span>=</span>
+            <input type="number" id="answer" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        </div>
+
+        <button class="submit-btn" id="submit-btn">Check Answer</button>
+
+        <div class="feedback" id="feedback"></div>
+
+        <div class="streak" id="streak">
+            <div class="streak-dot"></div>
+            <div class="streak-dot"></div>
+            <div class="streak-dot"></div>
+            <div class="streak-dot"></div>
+            <div class="streak-dot"></div>
+        </div>
+
+        <button class="hint-btn" id="hint-btn">💡 Need a hint?</button>
+
+        <div class="hint-area" id="hint-area"></div>
+
+        <div class="level-down-offer" id="level-down-offer">
+            <p>This level seems tough. Want to practice an easier level?</p>
+            <button class="level-down-btn" id="level-down-btn">Go Back a Level</button>
+        </div>
+    </main>
+
+    <script>
+        // Level configuration: 24 levels (6 per operation)
+        const LEVELS = [
+            // Addition (1-6)
+            { op: '+', name: 'Addition', range: [1, 5] },
+            { op: '+', name: 'Addition', range: [1, 10] },
+            { op: '+', name: 'Addition', range: [5, 15] },
+            { op: '+', name: 'Addition', range: [10, 20] },
+            { op: '+', name: 'Addition', range: [10, 50] },
+            { op: '+', name: 'Addition', range: [20, 100] },
+            // Subtraction (7-12)
+            { op: '-', name: 'Subtraction', range: [1, 5] },
+            { op: '-', name: 'Subtraction', range: [1, 10] },
+            { op: '-', name: 'Subtraction', range: [5, 15] },
+            { op: '-', name: 'Subtraction', range: [10, 20] },
+            { op: '-', name: 'Subtraction', range: [10, 50] },
+            { op: '-', name: 'Subtraction', range: [20, 100] },
+            // Multiplication (13-18)
+            { op: '×', name: 'Multiplication', range: [1, 5] },
+            { op: '×', name: 'Multiplication', range: [1, 10] },
+            { op: '×', name: 'Multiplication', range: [2, 12] },
+            { op: '×', name: 'Multiplication', range: [5, 12] },
+            { op: '×', name: 'Multiplication', range: [6, 15] },
+            { op: '×', name: 'Multiplication', range: [10, 20] },
+            // Division (19-24)
+            { op: '÷', name: 'Division', range: [1, 5] },
+            { op: '÷', name: 'Division', range: [1, 10] },
+            { op: '÷', name: 'Division', range: [2, 12] },
+            { op: '÷', name: 'Division', range: [5, 12] },
+            { op: '÷', name: 'Division', range: [6, 15] },
+            { op: '÷', name: 'Division', range: [10, 20] },
+        ];
+
+        const STREAK_TO_ADVANCE = 5;
+        const WRONG_TO_OFFER_LEVEL_DOWN = 3;
+
+        let state = {
+            level: 0,
+            streak: 0,
+            wrongCount: 0,
+            currentProblem: null,
+            hintShown: false
+        };
+
+        // DOM elements
+        const num1El = document.getElementById('num1');
+        const num2El = document.getElementById('num2');
+        const operatorEl = document.getElementById('operator');
+        const answerEl = document.getElementById('answer');
+        const submitBtn = document.getElementById('submit-btn');
+        const feedbackEl = document.getElementById('feedback');
+        const hintBtn = document.getElementById('hint-btn');
+        const hintArea = document.getElementById('hint-area');
+        const levelDownOffer = document.getElementById('level-down-offer');
+        const levelDownBtn = document.getElementById('level-down-btn');
+        const streakDots = document.querySelectorAll('.streak-dot');
+        const currentLevelEl = document.getElementById('current-level');
+        const operationNameEl = document.getElementById('operation-name');
+        const progressFill = document.getElementById('progress-fill');
+
+        function loadProgress() {
+            const saved = localStorage.getItem('henrys-corner-progress');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state.level = parsed.level || 0;
+            }
+        }
+
+        function saveProgress() {
+            localStorage.setItem('henrys-corner-progress', JSON.stringify({
+                level: state.level
+            }));
+        }
+
+        function rand(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generateProblem() {
+            const levelConfig = LEVELS[state.level];
+            const [min, max] = levelConfig.range;
+            let a, b, answer;
+
+            switch (levelConfig.op) {
+                case '+':
+                    a = rand(min, max);
+                    b = rand(min, max);
+                    answer = a + b;
+                    break;
+                case '-':
+                    a = rand(min, max);
+                    b = rand(min, a); // ensure non-negative result
+                    answer = a - b;
+                    break;
+                case '×':
+                    a = rand(min, max);
+                    b = rand(min, max);
+                    answer = a * b;
+                    break;
+                case '÷':
+                    b = rand(min, max);
+                    answer = rand(min, max);
+                    a = b * answer; // ensure clean division
+                    break;
+            }
+
+            state.currentProblem = { a, b, answer, op: levelConfig.op };
+            state.hintShown = false;
+
+            num1El.textContent = a;
+            num2El.textContent = b;
+            operatorEl.textContent = levelConfig.op;
+            answerEl.value = '';
+            answerEl.classList.remove('correct', 'incorrect');
+            feedbackEl.textContent = '';
+            feedbackEl.className = 'feedback';
+            hintArea.classList.remove('visible');
+            hintBtn.style.display = 'block';
+            levelDownOffer.classList.remove('visible');
+
+            answerEl.focus();
+        }
+
+        function generateHint() {
+            const { a, b, op, answer } = state.currentProblem;
+            
+            switch (op) {
+                case '+':
+                    if (b <= 10) {
+                        return `Try counting up from ${a}: ${a}... ${a+1}... ${a+2}... Keep going ${b} times!`;
+                    }
+                    return `Break it down: ${a} + ${b} = ${a} + ${Math.floor(b/10)*10} + ${b % 10}`;
+                case '-':
+                    return `Start at ${a} and count back ${b} times. Or think: ${b} + ? = ${a}`;
+                case '×':
+                    if (b <= 5) {
+                        const groups = Array(b).fill(a).join(' + ');
+                        return `${a} × ${b} means ${b} groups of ${a}: ${groups}`;
+                    }
+                    return `Break it up: ${a} × ${b} = (${a} × ${Math.floor(b/2)}) + (${a} × ${b - Math.floor(b/2)})`;
+                case '÷':
+                    return `Think: ${b} × ? = ${a}. How many groups of ${b} fit in ${a}?`;
+            }
+        }
+
+        function updateStreak() {
+            streakDots.forEach((dot, i) => {
+                dot.classList.toggle('filled', i < state.streak);
+            });
+        }
+
+        function updateLevelDisplay() {
+            currentLevelEl.textContent = state.level + 1;
+            operationNameEl.textContent = LEVELS[state.level].name;
+            progressFill.style.width = `${((state.level + 1) / LEVELS.length) * 100}%`;
+        }
+
+        function checkAnswer() {
+            const userAnswer = parseInt(answerEl.value, 10);
+            
+            if (isNaN(userAnswer)) {
+                answerEl.focus();
+                return;
+            }
+
+            if (userAnswer === state.currentProblem.answer) {
+                // Correct!
+                answerEl.classList.add('correct');
+                feedbackEl.textContent = '🎉 Correct!';
+                feedbackEl.className = 'feedback correct';
+                state.streak++;
+                state.wrongCount = 0;
+                updateStreak();
+
+                if (state.streak >= STREAK_TO_ADVANCE && state.level < LEVELS.length - 1) {
+                    state.level++;
+                    state.streak = 0;
+                    saveProgress();
+                    updateLevelDisplay();
+                    feedbackEl.textContent = '🎉 Level Up!';
+                }
+
+                setTimeout(generateProblem, 1200);
+            } else {
+                // Incorrect
+                answerEl.classList.add('incorrect');
+                feedbackEl.textContent = 'Not quite, try again!';
+                feedbackEl.className = 'feedback incorrect';
+                state.streak = 0;
+                state.wrongCount++;
+                updateStreak();
+
+                if (state.wrongCount >= WRONG_TO_OFFER_LEVEL_DOWN && state.level > 0) {
+                    levelDownOffer.classList.add('visible');
+                }
+
+                setTimeout(() => {
+                    answerEl.classList.remove('incorrect');
+                    answerEl.value = '';
+                    answerEl.focus();
+                }, 800);
+            }
+        }
+
+        function showHint() {
+            hintArea.textContent = generateHint();
+            hintArea.classList.add('visible');
+            hintBtn.style.display = 'none';
+            state.hintShown = true;
+        }
+
+        function levelDown() {
+            if (state.level > 0) {
+                state.level--;
+                state.streak = 0;
+                state.wrongCount = 0;
+                saveProgress();
+                updateLevelDisplay();
+                updateStreak();
+                generateProblem();
+            }
+        }
+
+        // Event listeners
+        submitBtn.addEventListener('click', checkAnswer);
+        
+        answerEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+
+        hintBtn.addEventListener('click', showHint);
+        levelDownBtn.addEventListener('click', levelDown);
+
+        // Initialize
+        loadProgress();
+        updateLevelDisplay();
+        updateStreak();
+        generateProblem();
+    </script>
+</body>
+</html>
