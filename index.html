@@ -221,6 +221,98 @@
             cursor: pointer;
         }
 
+        .save-code-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .your-code {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .your-code p {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+
+        .code-box {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            background: #f0f0ff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            letter-spacing: 2px;
+            display: inline-block;
+        }
+
+        .code-hint {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 5px;
+        }
+
+        .enter-code {
+            text-align: center;
+        }
+
+        .code-toggle-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .code-input-area {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .code-input-area input {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            width: 150px;
+            text-transform: uppercase;
+        }
+
+        .code-input-area input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .code-submit-btn {
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .code-error {
+            color: #dc2626;
+            font-size: 0.85rem;
+            min-height: 20px;
+        }
+
+        .code-success {
+            color: #16a34a;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 400px) {
             .problem {
@@ -285,10 +377,105 @@
             <p>This level seems tough. Want to practice an easier level?</p>
             <button class="level-down-btn" id="level-down-btn">Go Back a Level</button>
         </div>
+
+        <div class="save-code-section" id="save-code-section">
+            <div class="your-code" id="your-code-display" style="display: none;">
+                <p>Your save code:</p>
+                <div class="code-box" id="code-box">XXXX-XXXX</div>
+                <p class="code-hint">Write this down to save your progress!</p>
+            </div>
+            <div class="enter-code" id="enter-code-section">
+                <button class="code-toggle-btn" id="code-toggle-btn">Have a save code?</button>
+                <div class="code-input-area" id="code-input-area" style="display: none;">
+                    <input type="text" id="code-input" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off">
+                    <button class="code-submit-btn" id="code-submit-btn">Load</button>
+                    <p class="code-error" id="code-error"></p>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
-        // Level configuration: 24 levels (6 per operation)
+        // ============ PLAYER IDENTIFICATION (COOKIE) ============
+        function getPlayerId() {
+            let id = document.cookie.match(/playerId=([^;]+)/)?.[1];
+            if (!id) {
+                id = crypto.randomUUID();
+                document.cookie = `playerId=${id}; max-age=31536000; path=/; SameSite=Strict`;
+            }
+            return id;
+        }
+
+        let playerId = getPlayerId();
+
+        // Prefix all storage keys with player ID
+        function storageKey(key) {
+            return `hc_${playerId}_${key}`;
+        }
+
+        // ============ SAVE CODE SYSTEM ============
+        // Generate a friendly 8-character code from player ID
+        function generateSaveCode(id) {
+            // Take first 8 chars of UUID and format as XXXX-XXXX
+            const short = id.replace(/-/g, '').substring(0, 8).toUpperCase();
+            return short.substring(0, 4) + '-' + short.substring(4, 8);
+        }
+
+        // Convert save code back to a usable player ID prefix
+        function saveCodeToId(code) {
+            // Remove dash and lowercase
+            return code.replace('-', '').toLowerCase();
+        }
+
+        // Check if a save code has existing progress
+        function findProgressForCode(code) {
+            const prefix = 'hc_';
+            const searchId = saveCodeToId(code);
+            
+            // Look through localStorage for matching keys
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(prefix) && key.includes('_progress')) {
+                    // Extract the player ID from the key
+                    const keyId = key.replace(prefix, '').replace('_progress', '');
+                    if (keyId.startsWith(searchId)) {
+                        return keyId; // Return the full player ID
+                    }
+                }
+            }
+            return null;
+        }
+
+        function showSaveCode() {
+            const codeDisplay = document.getElementById('your-code-display');
+            const codeBox = document.getElementById('code-box');
+            const saveCode = generateSaveCode(playerId);
+            codeBox.textContent = saveCode;
+            codeDisplay.style.display = 'block';
+        }
+
+        function loadSaveCode(code) {
+            const foundId = findProgressForCode(code);
+            if (foundId) {
+                // Update cookie to this player ID
+                playerId = foundId;
+                document.cookie = `playerId=${playerId}; max-age=31536000; path=/; SameSite=Strict`;
+                
+                // Reload progress
+                loadProgress();
+                updateLevelDisplay();
+                updateStreak();
+                generateProblem();
+                
+                // Show the code
+                showSaveCode();
+                
+                return true;
+            }
+            return false;
+        }
+
+        // ============ LEVEL CONFIGURATION ============
         const LEVELS = [
             // Addition (1-6)
             { op: '+', name: 'Addition', range: [1, 5] },
@@ -348,7 +535,7 @@
         const progressFill = document.getElementById('progress-fill');
 
         function loadProgress() {
-            const saved = localStorage.getItem('henrys-corner-progress');
+            const saved = localStorage.getItem(storageKey('progress'));
             if (saved) {
                 const parsed = JSON.parse(saved);
                 state.level = parsed.level || 0;
@@ -356,7 +543,7 @@
         }
 
         function saveProgress() {
-            localStorage.setItem('henrys-corner-progress', JSON.stringify({
+            localStorage.setItem(storageKey('progress'), JSON.stringify({
                 level: state.level
             }));
         }
@@ -467,6 +654,12 @@
                     saveProgress();
                     updateLevelDisplay();
                     feedbackEl.textContent = '🎉 Level Up!';
+                    
+                    // Show save code on first level up
+                    if (state.level === 1) {
+                        showSaveCode();
+                        document.getElementById('code-toggle-btn').style.display = 'none';
+                    }
                 }
 
                 setTimeout(generateProblem, 1200);
@@ -522,11 +715,63 @@
         hintBtn.addEventListener('click', showHint);
         levelDownBtn.addEventListener('click', levelDown);
 
+        // Save code UI
+        const codeToggleBtn = document.getElementById('code-toggle-btn');
+        const codeInputArea = document.getElementById('code-input-area');
+        const codeInput = document.getElementById('code-input');
+        const codeSubmitBtn = document.getElementById('code-submit-btn');
+        const codeError = document.getElementById('code-error');
+
+        codeToggleBtn.addEventListener('click', () => {
+            codeInputArea.style.display = codeInputArea.style.display === 'none' ? 'flex' : 'none';
+            codeToggleBtn.textContent = codeInputArea.style.display === 'none' ? 'Have a save code?' : 'Cancel';
+        });
+
+        // Auto-format code input with dash
+        codeInput.addEventListener('input', (e) => {
+            let val = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            if (val.length > 4) {
+                val = val.substring(0, 4) + '-' + val.substring(4, 8);
+            }
+            e.target.value = val;
+        });
+
+        codeSubmitBtn.addEventListener('click', () => {
+            const code = codeInput.value.trim().toUpperCase();
+            if (code.length !== 9 || code[4] !== '-') {
+                codeError.textContent = 'Enter code as XXXX-XXXX';
+                codeError.className = 'code-error';
+                return;
+            }
+            
+            if (loadSaveCode(code)) {
+                codeError.textContent = 'Progress loaded!';
+                codeError.className = 'code-error code-success';
+                codeInputArea.style.display = 'none';
+                codeToggleBtn.style.display = 'none';
+            } else {
+                codeError.textContent = 'Code not found on this device';
+                codeError.className = 'code-error';
+            }
+        });
+
+        codeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                codeSubmitBtn.click();
+            }
+        });
+
         // Initialize
         loadProgress();
         updateLevelDisplay();
         updateStreak();
         generateProblem();
+
+        // Show save code if player has progress (level > 0)
+        if (state.level > 0) {
+            showSaveCode();
+            document.getElementById('code-toggle-btn').style.display = 'none';
+        }
     </script>
 </body>
 </html>
