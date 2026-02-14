@@ -279,12 +279,12 @@
 
         .code-input-area input {
             font-family: 'Courier New', monospace;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             text-align: center;
             padding: 10px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
-            width: 150px;
+            width: 220px;
             text-transform: uppercase;
         }
 
@@ -387,7 +387,7 @@
             <div class="enter-code" id="enter-code-section">
                 <button class="code-toggle-btn" id="code-toggle-btn">Have a save code?</button>
                 <div class="code-input-area" id="code-input-area" style="display: none;">
-                    <input type="text" id="code-input" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off">
+                    <input type="text" id="code-input" placeholder="TIGER-ROCKET-42" maxlength="25" autocomplete="off">
                     <button class="code-submit-btn" id="code-submit-btn">Load</button>
                     <p class="code-error" id="code-error"></p>
                 </div>
@@ -414,48 +414,52 @@
         }
 
         // ============ SAVE CODE SYSTEM ============
-        // Generate a friendly 8-character code from player ID
+        const WORDS = [
+            'TIGER', 'ROCKET', 'PIZZA', 'DRAGON', 'NINJA', 'ROBOT', 'LASER', 'COSMIC',
+            'THUNDER', 'FALCON', 'BLAZE', 'STORM', 'SHADOW', 'PHOENIX', 'TURBO', 'MEGA',
+            'ALPHA', 'COMET', 'SPARK', 'FROST', 'VIPER', 'EAGLE', 'SHARK', 'WOLF',
+            'BOLT', 'FLASH', 'POWER', 'HYPER', 'ULTRA', 'SUPER', 'SONIC', 'ASTRO',
+            'JUNGLE', 'OCEAN', 'MOUNTAIN', 'DESERT', 'FOREST', 'GLACIER', 'VOLCANO', 'CANYON',
+            'BRAVE', 'SWIFT', 'MIGHTY', 'LUCKY', 'HAPPY', 'WILD', 'COOL', 'EPIC'
+        ];
+
+        // Generate a code from player ID (deterministic)
         function generateSaveCode(id) {
-            // Take first 8 chars of UUID and format as XXXX-XXXX
-            const short = id.replace(/-/g, '').substring(0, 8).toUpperCase();
-            return short.substring(0, 4) + '-' + short.substring(4, 8);
-        }
-
-        // Convert save code back to a usable player ID prefix
-        function saveCodeToId(code) {
-            // Remove dash and lowercase
-            return code.replace('-', '').toLowerCase();
-        }
-
-        // Check if a save code has existing progress
-        function findProgressForCode(code) {
-            const prefix = 'hc_';
-            const searchId = saveCodeToId(code);
+            // Use the UUID to pick words and number consistently
+            const hash = id.replace(/-/g, '');
+            const word1Index = parseInt(hash.substring(0, 4), 16) % WORDS.length;
+            const word2Index = parseInt(hash.substring(4, 8), 16) % WORDS.length;
+            const num = parseInt(hash.substring(8, 10), 16) % 100;
             
-            // Look through localStorage for matching keys
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith(prefix) && key.includes('_progress')) {
-                    // Extract the player ID from the key
-                    const keyId = key.replace(prefix, '').replace('_progress', '');
-                    if (keyId.startsWith(searchId)) {
-                        return keyId; // Return the full player ID
-                    }
-                }
-            }
-            return null;
+            return `${WORDS[word1Index]}-${WORDS[word2Index]}-${num}`;
+        }
+
+        // Store mapping of save codes to player IDs
+        function saveSaveCode(code, id) {
+            const codes = JSON.parse(localStorage.getItem('hc_codes') || '{}');
+            codes[code] = id;
+            localStorage.setItem('hc_codes', JSON.stringify(codes));
+        }
+
+        function lookupSaveCode(code) {
+            const codes = JSON.parse(localStorage.getItem('hc_codes') || '{}');
+            return codes[code.toUpperCase()] || null;
         }
 
         function showSaveCode() {
             const codeDisplay = document.getElementById('your-code-display');
             const codeBox = document.getElementById('code-box');
             const saveCode = generateSaveCode(playerId);
+            
+            // Store the mapping
+            saveSaveCode(saveCode, playerId);
+            
             codeBox.textContent = saveCode;
             codeDisplay.style.display = 'block';
         }
 
         function loadSaveCode(code) {
-            const foundId = findProgressForCode(code);
+            const foundId = lookupSaveCode(code);
             if (foundId) {
                 // Update cookie to this player ID
                 playerId = foundId;
@@ -562,21 +566,27 @@
                     a = rand(min, max);
                     b = rand(min, max);
                     answer = a + b;
+                    // Larger number first
+                    if (b > a) [a, b] = [b, a];
                     break;
                 case '-':
                     a = rand(min, max);
                     b = rand(min, a); // ensure non-negative result
                     answer = a - b;
+                    // a is already larger since b <= a
                     break;
                 case '×':
                     a = rand(min, max);
                     b = rand(min, max);
                     answer = a * b;
+                    // Larger number first
+                    if (b > a) [a, b] = [b, a];
                     break;
                 case '÷':
                     b = rand(min, max);
                     answer = rand(min, max);
                     a = b * answer; // ensure clean division
+                    // a is already larger (product of b and answer)
                     break;
             }
 
@@ -727,19 +737,16 @@
             codeToggleBtn.textContent = codeInputArea.style.display === 'none' ? 'Have a save code?' : 'Cancel';
         });
 
-        // Auto-format code input with dash
+        // Auto-format code input
         codeInput.addEventListener('input', (e) => {
-            let val = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-            if (val.length > 4) {
-                val = val.substring(0, 4) + '-' + val.substring(4, 8);
-            }
-            e.target.value = val;
+            e.target.value = e.target.value.toUpperCase();
         });
 
         codeSubmitBtn.addEventListener('click', () => {
             const code = codeInput.value.trim().toUpperCase();
-            if (code.length !== 9 || code[4] !== '-') {
-                codeError.textContent = 'Enter code as XXXX-XXXX';
+            // Check format: WORD-WORD-##
+            if (!/^[A-Z]+-[A-Z]+-\d+$/.test(code)) {
+                codeError.textContent = 'Enter code as WORD-WORD-##';
                 codeError.className = 'code-error';
                 return;
             }
